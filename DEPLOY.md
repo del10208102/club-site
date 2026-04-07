@@ -51,7 +51,10 @@ cp .env.example .env
 nano .env
 ```
 
-- **ADMIN_SECRET**：务必设为**长随机字符串**。设置后，发布公告、上传作品、修改招新说明都需在页面填写「管理密钥」，或请求头带 `x-admin-secret`。
+- **SESSION_SECRET**：用于签发管理员登录 Cookie 的签名密钥，**务必**设为足够长的随机字符串。
+- **ADMIN_USERNAME**：管理员账号，默认 `admin`。
+- **ADMIN_PASSWORD_HASH**（推荐）：bcrypt 哈希。在项目根执行 `npm run hash-password -- 你的密码`，将输出写入 `.env`。
+- **ADMIN_PASSWORD**（仅建议本地调试）：明文密码；生产环境请改用哈希。
 - **DATA_DIR**、**UPLOAD_DIR**：可选；默认分别为 `data`、`uploads`。请保证进程对该目录有读写权限。
 
 ### 5. 启动 Node（生产）
@@ -144,8 +147,8 @@ npm run dev
 
 ## 六、安全建议
 
-1. 生产环境**必须**设置 **ADMIN_SECRET**，并勿泄露。
-2. 定期备份数据目录；服务器只开放必要端口。
+1. 生产环境**必须**设置 **SESSION_SECRET** 与 **ADMIN_PASSWORD_HASH**（或仅本地调试时使用 **ADMIN_PASSWORD**），并勿泄露。
+2. 定期备份 `data/site.json` 与 `uploads/`；服务器只开放必要端口。
 3. 若面向公网，建议上 **HTTPS**。
 
 如有问题，可在项目内继续扩展：登录体系、OSS 直传、数据库迁移到 MySQL 等。

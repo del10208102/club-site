@@ -1,0 +1,8 @@
+import type { LayoutServerLoad } from './$types';
+
+export const load: LayoutServerLoad = ({ locals }) => {
+	return {
+		admin: locals.admin,
+		guest: locals.guest
+	};
+};

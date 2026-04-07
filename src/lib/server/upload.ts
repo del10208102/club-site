@@ -5,7 +5,7 @@ import { env } from '$env/dynamic/private';
 
 export const UPLOAD_DIR = env.UPLOAD_DIR ?? 'uploads';
 
-const MAX_BYTES = 20 * 1024 * 1024; // 20MB
+const MAX_BYTES = 25 * 1024 * 1024; // 25MB（docx/音频略大）
 const ALLOWED = new Set([
 	'image/jpeg',
 	'image/png',
@@ -13,7 +13,10 @@ const ALLOWED = new Set([
 	'image/webp',
 	'application/pdf',
 	'video/mp4',
-	'application/zip'
+	'application/zip',
+	'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+	'audio/mpeg',
+	'audio/mp3'
 ]);
 
 export function ensureUploadDir() {
@@ -21,7 +24,11 @@ export function ensureUploadDir() {
 }
 
 export function safeMime(type: string | null): type is string {
-	return !!type && ALLOWED.has(type);
+	if (!type) return false;
+	if (ALLOWED.has(type)) return true;
+	/* 部分浏览器对 mp3 使用 audio/mp3 */
+	if (type === 'audio/mp3') return true;
+	return false;
 }
 
 export function extFromMime(mime: string): string {
@@ -32,14 +39,17 @@ export function extFromMime(mime: string): string {
 		'image/webp': '.webp',
 		'application/pdf': '.pdf',
 		'video/mp4': '.mp4',
-		'application/zip': '.zip'
+		'application/zip': '.zip',
+		'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+		'audio/mpeg': '.mp3',
+		'audio/mp3': '.mp3'
 	};
 	return map[mime] ?? '.bin';
 }
 
 export function saveUploadBuffer(buffer: Buffer, mime: string, maxBytes = MAX_BYTES): { storedName: string } {
 	if (buffer.length > maxBytes) throw new Error('文件过大');
-	if (!safeMime(mime)) throw new Error('不支持的文件类型');
+	if (!safeMime(mime)) throw new Error('不支持的文件类型（支持图片、DOCX、MP3 等）');
 	ensureUploadDir();
 	const id = randomUUID();
 	const ext = extFromMime(mime);

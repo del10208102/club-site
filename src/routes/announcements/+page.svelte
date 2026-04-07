@@ -1,65 +1,81 @@
 <script lang="ts">
 	let { data } = $props();
-	let title = $state('');
-	let body = $state('');
-	let adminToken = $state('');
-	let message = $state('');
-	let err = $state('');
-
-	async function submit(e: Event) {
-		e.preventDefault();
-		message = '';
-		err = '';
-		const fd = new FormData();
-		fd.set('title', title);
-		fd.set('body', body);
-		if (adminToken) fd.set('admin_token', adminToken);
-		const r = await fetch('/api/announcements', { method: 'POST', body: fd });
-		if (!r.ok) {
-			try {
-				const j = await r.json();
-				err = j.message ?? r.statusText;
-			} catch {
-				err = '发布失败';
-			}
-			return;
-		}
-		title = '';
-		body = '';
-		message = '已发布，请刷新页面查看。';
-		window.location.reload();
-	}
 </script>
 
+<svelte:head>
+	<title>信息公示 · Fantasy动漫社</title>
+</svelte:head>
+
 <h1>信息公示</h1>
+<p class="page-intro">通知公告目录，点击查看完整内容与排版。</p>
 
-{#each data.items as a}
-	<article class="card">
-		<h2 style="margin: 0 0 0.5rem; font-size: 1.1rem;">{a.title}</h2>
-		<p style="white-space: pre-wrap; margin: 0;">{a.body}</p>
-		<p style="margin: 0.75rem 0 0; color: var(--muted); font-size: 0.85rem;">{a.created_at}</p>
-	</article>
-{:else}
-	<p class="card">暂无公告。</p>
-{/each}
+<ul class="ann-index">
+	{#each data.items as a}
+		<li>
+			<a class="ann-row card" href="/announcements/{a.id}">
+				<div>
+					<h2 class="ann-title">{a.title}</h2>
+					<p class="ann-excerpt">{a.list_excerpt}</p>
+					<time class="ann-time" datetime={a.created_at}>{a.created_at}</time>
+				</div>
+				<span class="ann-go">查看 →</span>
+			</a>
+		</li>
+	{:else}
+		<li class="card">暂无公告。</li>
+	{/each}
+</ul>
 
-<h2>发布新公告</h2>
-<p style="color: var(--muted); font-size: 0.9rem;">
-	若服务器设置了环境变量 <code>ADMIN_SECRET</code>，请在下方填写相同的管理密钥。
-</p>
-<form onsubmit={submit} class="card">
-	<label for="t">标题</label>
-	<input id="t" type="text" bind:value={title} required />
-
-	<label for="b">正文</label>
-	<textarea id="b" bind:value={body}></textarea>
-
-	<label for="adm">管理密钥（可选）</label>
-	<input id="adm" type="password" bind:value={adminToken} autocomplete="off" />
-
-	<p style="margin-top: 1rem;">
-		<button type="submit">发布</button>
-	</p>
-	{#if err}<p class="err">{err}</p>{/if}
-	{#if message}<p class="ok">{message}</p>{/if}
-</form>
+<style>
+	.page-intro {
+		color: var(--muted);
+		margin: -0.25rem 0 1.25rem;
+		font-size: 0.95rem;
+	}
+	.ann-index {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.85rem;
+	}
+	.ann-row {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		align-items: flex-start;
+		gap: 1rem;
+		padding: 1.1rem 1.25rem;
+		color: inherit;
+	}
+	.ann-row:hover {
+		border-color: rgba(183, 148, 246, 0.4);
+		text-decoration: none;
+		color: inherit;
+	}
+	.ann-title {
+		margin: 0 0 0.4rem;
+		font-size: 1.08rem;
+		font-weight: 600;
+	}
+	.ann-excerpt {
+		margin: 0 0 0.5rem;
+		font-size: 0.9rem;
+		color: var(--muted);
+		line-height: 1.55;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+	.ann-time {
+		font-size: 0.8rem;
+		color: var(--muted);
+	}
+	.ann-go {
+		flex-shrink: 0;
+		font-weight: 600;
+		color: var(--accent);
+	}
+</style>

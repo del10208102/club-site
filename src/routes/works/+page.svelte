@@ -1,100 +1,130 @@
 <script lang="ts">
 	let { data } = $props();
-	let title = $state('');
-	let description = $state('');
-	let adminToken = $state('');
-	let fileInput: HTMLInputElement | undefined = $state();
-	let err = $state('');
-	let loading = $state(false);
-
-	function fileUrl(stored: string) {
-		return `/files/${encodeURIComponent(stored)}`;
-	}
-
-	function isImage(m: string) {
-		return m.startsWith('image/');
-	}
-	function isVideo(m: string) {
-		return m.startsWith('video/');
-	}
-
-	async function submit(e: Event) {
-		e.preventDefault();
-		err = '';
-		const f = fileInput?.files?.[0];
-		if (!f) {
-			err = '请选择文件';
-			return;
-		}
-		loading = true;
-		const fd = new FormData();
-		fd.set('title', title);
-		fd.set('description', description);
-		fd.set('file', f);
-		if (adminToken) fd.set('admin_token', adminToken);
-		const r = await fetch('/api/works', { method: 'POST', body: fd });
-		loading = false;
-		if (!r.ok) {
-			try {
-				const j = await r.json();
-				err = j.message ?? r.statusText;
-			} catch {
-				err = '上传失败';
-			}
-			return;
-		}
-		title = '';
-		description = '';
-		if (fileInput) fileInput.value = '';
-		window.location.reload();
-	}
 </script>
 
+<svelte:head>
+	<title>作品展示 · Fantasy动漫社</title>
+</svelte:head>
+
 <h1>作品展示</h1>
+<p class="page-intro">以下为社团作品目录，点选条目查看全文与附件。</p>
 
-<div class="grid">
+<ul class="work-index">
 	{#each data.items as w}
-		<div class="card">
-			<h2 style="margin: 0 0 0.5rem; font-size: 1rem;">{w.title}</h2>
-			{#if w.description}
-				<p style="margin: 0 0 0.75rem; font-size: 0.9rem; color: var(--muted);">{w.description}</p>
-			{/if}
-			<div class="work-thumb">
-				{#if isImage(w.mime)}
-					<img src={fileUrl(w.stored_name)} alt={w.original_name} />
-				{:else if isVideo(w.mime)}
-					<!-- svelte-ignore a11y_media_has_caption -->
-					<video src={fileUrl(w.stored_name)} controls preload="metadata"></video>
-				{:else}
-					<a href={fileUrl(w.stored_name)} class="btn secondary">下载 {w.original_name}</a>
-				{/if}
-			</div>
-			<p style="margin: 0.5rem 0 0; font-size: 0.8rem; color: var(--muted);">{w.created_at}</p>
-		</div>
+		<li>
+			<a class="work-row card" href="/works/{w.id}">
+				<div class="work-row-main">
+					<h2 class="work-row-title">
+						<span class="kind-pill">{w.work_kind === 'art' ? '画作' : '文字'}</span>
+						{w.title}
+					</h2>
+					<p class="work-row-excerpt">{w.list_excerpt}</p>
+					<div class="work-row-meta">
+						<span class="pill">{w.department || '—'}</span>
+						<span class="work-row-author">{w.author || '—'}</span>
+						<time datetime={w.created_at}>{w.created_at}</time>
+					</div>
+				</div>
+				<span class="work-row-go">查看 →</span>
+			</a>
+		</li>
 	{:else}
-		<p class="card">暂无作品，欢迎上传。</p>
+		<li class="card">暂无作品。</li>
 	{/each}
-</div>
+</ul>
 
-<h2>上传作品</h2>
-<p style="color: var(--muted); font-size: 0.9rem;">
-	支持常见图片、PDF、MP4、ZIP，单文件最大 20MB。若配置了 <code>ADMIN_SECRET</code> 请填写密钥。
-</p>
-<form onsubmit={submit} class="card">
-	<label for="title">标题</label>
-	<input id="title" type="text" bind:value={title} required />
-
-	<label for="desc">简介（可选）</label>
-	<input id="desc" type="text" bind:value={description} />
-
-	<label for="file">文件</label>
-	<input id="file" type="file" bind:this={fileInput} required />
-
-	<label for="adm">管理密钥（可选）</label>
-	<input id="adm" type="password" bind:value={adminToken} autocomplete="off" />
-
-	<p style="margin-top: 1rem;">
-		<button type="submit" disabled={loading}>{loading ? '上传中…' : '上传'}</button>
-	</p>
-	{#if err}<p class="err">{err}</p>{/if}
-</form>
+<style>
+	.page-intro {
+		color: var(--muted);
+		margin: -0.25rem 0 1.25rem;
+		font-size: 0.95rem;
+	}
+	.work-index {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.85rem;
+	}
+	.work-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1rem;
+		padding: 1.1rem 1.25rem;
+		color: inherit;
+		transition: border-color 0.2s ease, transform 0.15s ease;
+	}
+	.work-row:hover {
+		border-color: rgba(183, 148, 246, 0.4);
+		transform: translateY(-1px);
+		text-decoration: none;
+		color: inherit;
+	}
+	.work-row-main {
+		flex: 1;
+		min-width: 0;
+	}
+	.work-row-title {
+		margin: 0 0 0.45rem;
+		font-size: 1.08rem;
+		font-weight: 600;
+		color: var(--text);
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.45rem;
+	}
+	.kind-pill {
+		flex-shrink: 0;
+		font-size: 0.68rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		padding: 0.1rem 0.4rem;
+		border-radius: 999px;
+		background: rgba(183, 148, 246, 0.14);
+		border: 1px solid rgba(183, 148, 246, 0.28);
+		color: var(--accent-soft);
+	}
+	.work-row-excerpt {
+		margin: 0 0 0.65rem;
+		font-size: 0.9rem;
+		color: var(--muted);
+		line-height: 1.55;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+	.work-row-meta {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem 0.85rem;
+		font-size: 0.8rem;
+		color: var(--muted);
+	}
+	.pill {
+		display: inline-block;
+		padding: 0.12rem 0.5rem;
+		border-radius: 999px;
+		background: rgba(183, 148, 246, 0.12);
+		border: 1px solid rgba(183, 148, 246, 0.22);
+		color: var(--accent-soft);
+		font-size: 0.75rem;
+	}
+	.work-row-author::before {
+		content: '作者：';
+		opacity: 0.75;
+	}
+	.work-row-go {
+		flex-shrink: 0;
+		font-size: 0.9rem;
+		font-weight: 600;
+		color: var(--accent);
+		padding-top: 0.15rem;
+	}
+</style>
