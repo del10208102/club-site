@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { mkdirSync, existsSync, writeFileSync } from 'node:fs';
-import { env } from '$env/dynamic/private';
+import { resolveUploadDirectory } from './project-paths';
 
-export const UPLOAD_DIR = env.UPLOAD_DIR ?? 'uploads';
+export const UPLOAD_DIR = resolveUploadDirectory();
 
 const MAX_BYTES = 25 * 1024 * 1024; // 25MB（docx/音频略大）
 const ALLOWED = new Set([

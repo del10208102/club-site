@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import bcrypt from 'bcryptjs';
 import { getGuestByUsername } from '$lib/server/store';
 import { createGuestSession, guestCookieName } from '$lib/server/guest-session';
+import { cookieSecureFromRequest } from '$lib/server/cookie-options';
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	const body = await request.json().catch(() => ({}));
@@ -26,7 +27,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 	cookies.set(guestCookieName(), token, {
 		path: '/',
 		httpOnly: true,
-		secure: process.env.NODE_ENV === 'production',
+		secure: cookieSecureFromRequest(request),
 		sameSite: 'lax',
 		maxAge: 60 * 60 * 24 * 30
 	});

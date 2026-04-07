@@ -43,15 +43,16 @@
 				<a href="/recruit" class={navClass('/recruit')}>社团招新</a>
 				{#if data.admin}
 					<a href="/admin" class={navClass('/admin')}>管理</a>
-					<a href="/logout" class="nav-auth">退出</a>
-				{:else}
-					{#if data.guest}
-						<span class="nav-guest" title="访客账号">{data.guest.username}</span>
-						<button type="button" class="nav-auth nav-btn" onclick={guestLogout}>访客退出</button>
-					{:else}
-						<a href="/auth/login" class="nav-auth">访客登录</a>
-						<a href="/auth/register">注册</a>
-					{/if}
+					<a href="/logout" class="nav-auth">管理员退出</a>
+				{/if}
+				{#if data.guest}
+					<span class="nav-guest" title="访客账号">{data.guest.username}</span>
+					<button type="button" class="nav-auth nav-btn" onclick={guestLogout}>访客退出</button>
+				{:else if !data.admin}
+					<a href="/auth/login" class="nav-auth">访客登录</a>
+					<a href="/auth/register">注册</a>
+				{/if}
+				{#if !data.admin}
 					<a href="/login" class="nav-auth">管理员登录</a>
 				{/if}
 			</div>

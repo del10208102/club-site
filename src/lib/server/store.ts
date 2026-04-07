@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync, writeFileSync, renameSync, existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
-import { env } from '$env/dynamic/private';
 import { plainTextToArticleHtml } from './plain-html';
 import { UPLOAD_DIR } from './upload';
+import { resolveDataDirectory } from './project-paths';
 
-const dataDir = env.DATA_DIR ?? 'data';
+const dataDir = resolveDataDirectory();
 const storePath = () => join(dataDir, 'site.json');
 
 /** 文字类（DOCX 等）与画作（主展示为图片） */

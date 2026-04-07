@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
 	let { data, form } = $props();
 </script>
 
@@ -17,7 +16,8 @@
 				<code>.env</code> 中设置 <code>ADMIN_PASSWORD</code> 或 <code>ADMIN_PASSWORD_HASH</code>。
 			</p>
 		{/if}
-		<form method="POST" use:enhance>
+		<!-- 使用原生表单提交，确保 Set-Cookie 与 303 重定向被浏览器完整处理（避免渐进增强与 Cookie 的兼容问题） -->
+		<form method="POST">
 			<label for="u">账号</label>
 			<input id="u" name="username" type="text" autocomplete="username" required placeholder="admin" />
 
@@ -28,7 +28,7 @@
 				<button type="submit">登录</button>
 			</p>
 			{#if form?.message}
-				<p class="err">{form.message}</p>
+				<p class="err" role="alert">{form.message}</p>
 			{/if}
 		</form>
 		<p class="login-foot"><a href="/">返回首页</a></p>

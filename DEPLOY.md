@@ -55,7 +55,11 @@ nano .env
 - **ADMIN_USERNAME**：管理员账号，默认 `admin`。
 - **ADMIN_PASSWORD_HASH**（推荐）：bcrypt 哈希。在项目根执行 `npm run hash-password -- 你的密码`，将输出写入 `.env`。
 - **ADMIN_PASSWORD**（仅建议本地调试）：明文密码；生产环境请改用哈希。
-- **DATA_DIR**、**UPLOAD_DIR**：可选；默认分别为 `data`、`uploads`。请保证进程对该目录有读写权限。
+- **生产环境**（`NODE_ENV=production`）下**必须**配置 `ADMIN_PASSWORD` 或 `ADMIN_PASSWORD_HASH` 之一，否则无法登录（后台会提示未配置密码）。
+- **用 `http://` 访问**（如仅公网 IP、未上 HTTPS）时，Cookie 会自动按协议设置；若仍无法登录，可在 `.env` 中设置 `COOKIE_SECURE=0` 后重启进程。
+- **DATA_DIR**、**UPLOAD_DIR**：可选；默认分别为 `data`、`uploads`（**相对于项目根目录**，见下）。请保证进程对该目录有读写权限。
+- **PROJECT_ROOT**（可选）：若用 pm2/systemd 启动时**工作目录不是项目根**（例如变成 `/root`），未设置时会把 `data/`、`uploads/` 写到错误位置，表现为**首页轮播空白、访客登录失败、上传图片 404**。解决二选一：① 启动配置里把 `cwd` 设为项目根（推荐）；② 在 `.env` 中设置 `PROJECT_ROOT=/你的项目路径`。本仓库在运行时若入口为 `…/build/index.js`，也会自动把项目根解析为 `build` 的上一级，一般无需手填。
+- **首次部署**：请把本地的 **`data/site.json`**（及 **`uploads/`** 中已有文件）一并拷到服务器对应目录，或在后台重新配置轮播、重新注册访客；否则线上是空数据。
 
 ### 5. 启动 Node（生产）
 
@@ -67,12 +71,22 @@ NODE_ENV=production node build
 
 默认监听 **3000** 端口（SvelteKit adapter-node 默认）。
 
+若前面有 **Nginx 反向代理**，建议在运行 Node 的环境变量中增加（与 SvelteKit adapter-node 文档一致）：
+
+```bash
+export PROTOCOL_HEADER=x-forwarded-proto
+export HOST_HEADER=x-forwarded-host
+```
+
+或在 `pm2 ecosystem` / systemd 的 `Environment=` 中写入，使站内生成的 URL 与 Cookie 与公网访问方式一致。
+
 **方式 B：PM2 守护进程（推荐）**
 
 ```bash
 sudo npm i -g pm2
 cd /opt/club-site
-pm2 start build/index.js --name club-site
+# 务必在项目根执行，或显式指定 cwd，避免 data/uploads 路径错乱
+pm2 start build/index.js --name club-site --cwd /opt/club-site
 pm2 save
 pm2 startup   # 按提示执行一行命令，实现开机自启
 ```
@@ -94,6 +108,7 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        /* 必加：否则 Node 不知道访客用 https，登录 Cookie 可能异常 */
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
