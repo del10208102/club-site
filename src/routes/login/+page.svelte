@@ -1,5 +1,61 @@
 <script lang="ts">
-	let { data, form } = $props();
+	import { goto, invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
+
+	let { data } = $props();
+
+	let username = $state('');
+	let password = $state('');
+	let err = $state('');
+	let loading = $state(false);
+
+	async function submit(e: Event) {
+		e.preventDefault();
+		err = '';
+		loading = true;
+		const redirectTo = page.url.searchParams.get('redirectTo') ?? '';
+		let r: Response;
+		try {
+			r = await fetch('/api/auth/admin/login', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'include',
+				body: JSON.stringify({
+					username,
+					password,
+					...(redirectTo.startsWith('/') && !redirectTo.startsWith('//')
+						? { redirectTo }
+						: {})
+				})
+			});
+		} catch {
+			loading = false;
+			err = '网络错误，请检查连接后重试。';
+			return;
+		}
+		loading = false;
+
+		if (!r.ok) {
+			const text = await r.text();
+			let msg = '登录失败';
+			try {
+				const j = JSON.parse(text) as { message?: string };
+				msg = j.message ?? msg;
+			} catch {
+				if (text.trim()) msg = text.trim().slice(0, 200);
+			}
+			err = msg;
+			return;
+		}
+
+		await invalidateAll();
+		const j = (await r.json()) as { redirectTo?: string };
+		const dest =
+			typeof j.redirectTo === 'string' && j.redirectTo.startsWith('/') && !j.redirectTo.startsWith('//')
+				? j.redirectTo
+				: '/admin';
+		await goto(dest, { replaceState: true });
+	}
 </script>
 
 <svelte:head>
@@ -16,20 +72,32 @@
 				<code>.env</code> 中设置 <code>ADMIN_PASSWORD</code> 或 <code>ADMIN_PASSWORD_HASH</code>。
 			</p>
 		{/if}
-		<!-- 使用原生表单提交，确保 Set-Cookie 与 303 重定向被浏览器完整处理（避免渐进增强与 Cookie 的兼容问题） -->
-		<form method="POST">
+		<form class="auth-form" onsubmit={submit}>
 			<label for="u">账号</label>
-			<input id="u" name="username" type="text" autocomplete="username" required placeholder="admin" />
+			<input
+				id="u"
+				name="username"
+				type="text"
+				autocomplete="username"
+				required
+				placeholder="admin"
+				bind:value={username}
+			/>
 
 			<label for="p">密码</label>
-			<input id="p" name="password" type="password" autocomplete="current-password" required />
+			<input
+				id="p"
+				name="password"
+				type="password"
+				autocomplete="current-password"
+				required
+				bind:value={password}
+			/>
 
 			<p style="margin-top: 1.25rem;">
-				<button type="submit">登录</button>
+				<button type="submit" disabled={loading}>{loading ? '登录中…' : '登录'}</button>
 			</p>
-			{#if form?.message}
-				<p class="err" role="alert">{form.message}</p>
-			{/if}
+			{#if err}<p class="err" role="alert">{err}</p>{/if}
 		</form>
 		<p class="login-foot"><a href="/">返回首页</a></p>
 	</div>

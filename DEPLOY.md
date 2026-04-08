@@ -60,25 +60,28 @@ nano .env
 - **DATA_DIR**、**UPLOAD_DIR**：可选；默认分别为 `data`、`uploads`（**相对于项目根目录**，见下）。请保证进程对该目录有读写权限。
 - **PROJECT_ROOT**（可选）：若用 pm2/systemd 启动时**工作目录不是项目根**（例如变成 `/root`），未设置时会把 `data/`、`uploads/` 写到错误位置，表现为**首页轮播空白、访客登录失败、上传图片 404**。解决二选一：① 启动配置里把 `cwd` 设为项目根（推荐）；② 在 `.env` 中设置 `PROJECT_ROOT=/你的项目路径`。本仓库在运行时若入口为 `…/build/index.js`，也会自动把项目根解析为 `build` 的上一级，一般无需手填。
 - **首次部署**：请把本地的 **`data/site.json`**（及 **`uploads/`** 中已有文件）一并拷到服务器对应目录，或在后台重新配置轮播、重新注册访客；否则线上是空数据。
+- **ORIGIN（重要）**：SvelteKit 用表单登录时会校验 CSRF。Node 在反代后面时往往不知道「公网地址」，浏览器提交的 `Origin`（如 `http://47.114.86.209`）与服务器推断的不一致，就会出现 **`Cross-site POST form submissions are forbidden`**。任选其一：① 在 `.env` 或进程环境里设置 **`ORIGIN=http://你的公网IP或域名`**（须与地址栏完全一致，含 `http`/`https`，若用默认 80/443 不写端口）；② 使用下面的 **`PROTOCOL_HEADER` + `HOST_HEADER`**，并在 Nginx 里转发 **`X-Forwarded-Proto`**、**`X-Forwarded-Host`**（见 §6）。**注意**：生产环境默认**不会**自动读取 `.env`，需用 `node --env-file=.env build` 启动，或在 pm2 / systemd 里显式写入上述变量。
 
 ### 5. 启动 Node（生产）
 
 **方式 A：直接启动（调试）**
 
 ```bash
-NODE_ENV=production node build
+NODE_ENV=production node --env-file=.env build
 ```
+
+若未用 `--env-file`，请自行 `export ORIGIN=...`（及 `SESSION_SECRET` 等）后再执行 `node build`。
 
 默认监听 **3000** 端口（SvelteKit adapter-node 默认）。
 
-若前面有 **Nginx 反向代理**，建议在运行 Node 的环境变量中增加（与 SvelteKit adapter-node 文档一致）：
+若前面有 **Nginx 反向代理**，建议在运行 Node 的环境变量中增加（与 [adapter-node 文档](https://svelte.dev/docs/kit/adapter-node) 一致），**可替代手写 `ORIGIN`**：
 
 ```bash
 export PROTOCOL_HEADER=x-forwarded-proto
 export HOST_HEADER=x-forwarded-host
 ```
 
-或在 `pm2 ecosystem` / systemd 的 `Environment=` 中写入，使站内生成的 URL 与 Cookie 与公网访问方式一致。
+Nginx 须同时转发 `X-Forwarded-Host`（见 §6）。在 `pm2 ecosystem` / systemd 的 `Environment=` 中写入同上。
 
 **方式 B：PM2 守护进程（推荐）**
 
@@ -106,9 +109,10 @@ server {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        /* 必加：否则 Node 不知道访客用 https，登录 Cookie 可能异常 */
+        # 必加：否则 HTTPS / 管理员表单 CSRF / Cookie 可能异常
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
